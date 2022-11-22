@@ -1,0 +1,188 @@
+define endian=little;
+define alignment=1;
+
+define space ram type=ram_space size=4 wordsize=1 default;
+define space register type=register_space size=4;
+
+define token instr(8)
+	OP = (0, 7);
+define token immtoken1(8)
+        imm8 = (0, 7);
+define token immtoken2(16)
+        imm16 = (0, 15);
+define token immtoken4(32)
+        imm32 = (0, 31);
+        
+imm8t:          "#"^imm8         is imm8         { tmp:4 = imm8; export tmp; }
+imm16t:         "#"^imm16        is imm16        { tmp:4 = imm16; export tmp; }
+imm32t:         "#"^imm32        is imm32        { tmp:4 = imm32; export tmp; }
+
+# Instructions
+
+:MOBJ1 imm8t             is OP=0x10 ; imm8t {}
+:MOBJ1 imm16t            is OP=0x20 ; imm16t {}
+:MOBJ1 imm32t            is OP=0x30 ; imm32t {}
+
+:MOBJ2 imm8t             is OP=0x11 ; imm8t {}
+:MOBJ2 imm16t            is OP=0x21 ; imm16t {}
+:MOBJ2 imm32t            is OP=0x31 ; imm32t {}
+
+:MOBJ3 imm8t             is OP=0x12 ; imm8t {}
+:MOBJ3 imm16t            is OP=0x22 ; imm16t {}
+:MOBJ3 imm32t            is OP=0x32 ; imm32t {}
+
+
+# PUSH
+
+:PUSH imm8t             is OP=0x50 ; imm8t {}
+:PUSH imm8t             is OP=0x51 ; imm8t {}
+:PUSH imm16t            is OP=0x52 ; imm16t {}
+:PUSH imm32t            is OP=0x53 ; imm32t {}
+
+:PUSH imm8t             is OP=0x5E ; imm8t {}
+
+:PUSH imm16t             is OP=0x60 ; imm16t {}
+:PUSH imm8t             is OP=0x61 ; imm8t {}
+:PUSH imm16t            is OP=0x62 ; imm16t {}
+:PUSH imm32t            is OP=0x63 ; imm32t {}
+
+:PUSH imm32t             is OP=0x70 ; imm32t {}
+:PUSH imm8t             is OP=0x71 ; imm8t {}
+:PUSH imm16t            is OP=0x72 ; imm16t {}
+:PUSH imm32t            is OP=0x73 ; imm32t {}
+
+:PUSH imm8t             is OP=0x17 ; imm8t {}
+:PUSH imm16t            is OP=0x27 ; imm16t {}
+:PUSH imm32t            is OP=0x37 ; imm32t {}
+
+
+# ADD SP, #X
+
+:ADD "SP, " imm8t             is OP=0x13 ; imm8t {}
+:ADD "SP, " imm16t            is OP=0x23 ; imm16t {}
+:ADD "SP, " imm32t            is OP=0x33 ; imm32t {}
+
+
+# JMP
+
+# JMP by IMM + other val
+:JMP imm8t             is OP=0x14 ; imm8t {}
+:JMP imm16t            is OP=0x24 ; imm16t {}
+:JMP imm32t            is OP=0x34 ; imm32t {}
+
+# JMP by IMM
+:JMP imm8t             is OP=0x15 ; imm8t {}
+:JMP imm16t            is OP=0x25 ; imm16t {}
+:JMP imm32t            is OP=0x35 ; imm32t {}
+
+# IF R14 is zero, then JMP...
+:JZ imm8t             is OP=0x16 ; imm8t {}
+:JZ imm16t            is OP=0x26 ; imm16t {}
+:JZ imm32t            is OP=0x36 ; imm32t {}
+
+
+
+
+# CALL
+
+:CALL imm8t             is OP=0x19 ; imm8t {}
+:CALL imm16t            is OP=0x29 ; imm16t {}
+:CALL imm32t            is OP=0x39 ; imm32t {}
+
+:CALL imm8t             is OP=0x1A ; imm8t {}
+:CALL imm16t            is OP=0x2A ; imm16t {}
+:CALL imm32t            is OP=0x3A ; imm32t {}
+
+# Shenmue Fn Table
+:CALL imm8t             is OP=0x1B ; imm8t {}
+:CALL imm16t            is OP=0x2B ; imm16t {}
+:CALL imm32t            is OP=0x3B ; imm32t {}
+
+:CALL imm8t             is OP=0x1C ; imm8t {}
+:CALL imm16t            is OP=0x2C ; imm16t {}
+:CALL imm32t            is OP=0x3C ; imm32t {}
+
+:CALL imm8t             is OP=0x1D ; imm8t {}
+:CALL imm16t            is OP=0x2D ; imm16t {}
+:CALL imm32t            is OP=0x3D ; imm32t {}
+
+
+
+# Operators
+
+#0x88 	        1000 1000 	==
+:IS_EQU imm8t         is OP=0x88 ; imm8t {}
+
+#0x89 	        1000 1001 	!=
+:IS_NEQ imm8t         is OP=0x89 ; imm8t {}
+
+#0x8A 	        1000 1010 	>=
+:IS_GTEQ imm8t        is OP=0x8A ; imm8t {}
+
+#0x8B 	        1000 1011 	>
+:IS_GT imm8t          is OP=0x8B ; imm8t {}
+
+#0x8C 	        1000 1100 	<=
+:IS_LTEQ imm8t        is OP=0x8C ; imm8t {}
+
+#0x8D 	        1000 1101 	<
+:IS_LT imm8t          is OP=0x8D ; imm8t {}
+
+#0x8E 	        1000 1110 	~
+:ONESCOMP imm8t          is OP=0x8E ; imm8t {}
+
+#0x8F 	        1000 1111 	&=
+:ANDEQ imm8t       is OP=0x8F ; imm8t {}
+
+#0x90 	        1001 0000 	=
+:EQ imm8t        is OP=0x90 ; imm8t {}
+
+#0x91 	        1001 0001 	^=
+:XOR_EQ imm8t        is OP=0x91 ; imm8t {}
+
+#0x92 	        1001 0010 	+=
+:ADD_EQ imm8t         is OP=0x92 ; imm8t {}
+
+#0x93 	        1001 0011 	-=
+:SUB_EQ imm8t        is OP=0x93 ; imm8t {}
+
+#0x94 	        1001 0100 	*=
+:MUL_EQ imm8t        is OP=0x94 ; imm8t {}
+
+#0x95 	        1001 0101 	/=
+:DIV_EQ imm8t        is OP=0x95 ; imm8t {}
+
+#0x96 	        1001 0110 	%=
+:MOD_EQ imm8t        is OP=0x96 ; imm8t {}
+
+#0x97 	        1001 0111 	<<=
+:LSHIFT_EQ imm8t       is OP=0x97 ; imm8t {}
+
+#0x98 	        1001 1000 	>>=
+:RSHIFT_EQ imm8t       is OP=0x98 ; imm8t {}
+
+
+
+
+
+# Incomplete
+#0x80 	        1000 0000 	Write stack value to R14
+#0x81 	        1000 0001 	Read R14 value to stack
+#0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
+#0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
+#0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
+#0x85 	        1000 0101 	[MOBJ] Writes 8-bit to cycle pointer
+#0x86 	        1000 0110 	[MOBJ] Writes 16-bit to cycle pointer
+#0x87 	        1000 0111 	[MOBJ] Writes 32-bit to cycle pointer
+
+#0x9D 	        1001 1101 	float cast
+#0x9E 	        1001 1110 	signed cast
+#0x9F 	        1001 1111 	(float) <=
+#0xA0 	        1010 0000 	(float) <
+#0xA1 	        1010 0001 	(float) >= (<= inverted)
+#0xA2 	        1010 0010 	(float) > (< inverted)
+#0xA3 	        1010 0011 	(float) +
+#0xA4 	        1010 0100 	(float) -
+#0xA5 	        1010 0101 	(float) *
+#0xA6 	        1010 0110 	(float) / 
+#0x40 - 0x4F 	0100 xxxx 	Writes value from last time to stack

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<compiler_spec>
+	<default_proto>
+		<prototype name="__fake" extrapop="0" stackshift="0">
+			<input/>
+			<output/>
+		</prototype>
+	</default_proto>
+</compiler_spec>
