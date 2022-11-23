@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<processor_spec>
+<processor_spec>        
+        <default_memory_blocks>
+                <memory_block name="ram" start_address="ram:0x00000000" length="0x1000000" mode="rw"/>
+        </default_memory_blocks>
+        <default_symbols>
+                <symbol name="start" address="ram:0x00000030" type="code" entry="true"/>
+        </default_symbols>
 </processor_spec>
