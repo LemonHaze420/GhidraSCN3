@@ -9,7 +9,7 @@
 	          slafile="SCN3.sla"
 	          processorspec="SCN3.pspec"
 	          id="SCN3:BE:32:SCN3">
-		<description>Scenario Script v3 (d3t) script VM (32-bit LE)</description>
+		<description>Scenario Script v3 script VM</description>
 		<compiler name="default" spec="SCN3.cspec" id="default"/>
 	</language>
 </language_definitions>

@@ -1,4 +1,10 @@
+#########################################################################################################
+# Scenario Script v3 VM processor module
+# 
+# 
+#########################################################################################################
 # Processor Configuration
+#########################################################################################################
 define endian=little;
 define alignment=1;
 
@@ -16,27 +22,36 @@ define token immtoken2(16)
 define token immtoken4(32)
         imm32 = (0, 31);
 
+#########################################################################################################
 # Macros 
-        
+#########################################################################################################    
 imm8t:          "#"^imm8         is imm8         { tmp:4 = imm8; export tmp; }
 imm16t:         "#"^imm16        is imm16        { tmp:4 = imm16; export tmp; }
 imm32t:         "#"^imm32        is imm32        { tmp:4 = imm32; export tmp; }
 
-
-# interesting snippet..
-# The above is a contrived example of using the address-of operator to copy from a register that is not explicitly indicated by the instruction. This example constructs the address of the register following r1 within the register space, and then loads r1 with data from that address. The net effect of all this is that the register following r1 is copied into r1, even though it is not mentioned directly in the instruction. Notice that the address-of operator only produces the offset portion of the address, and to copy the desired value, the ‘*’ operator must have a register space override. 
-# tmp:4 = &r1 + 4; r1 = *[register]tmp;
-
 macro push(x){
-	sp = sp - 4;
-	*:4 sp = x;
+        local oldR2 = r2;
+        r3 = oldR2;
+        
+        local oldR1 = r1;
+        r2 = oldR1;
+        
+        local oldR0 = r0;
+        r1 = oldR0;
+        
+        r0 = x;    
+        
+	#sp = sp - 4;
+	#*:4 sp = x;  
 }
 macro pop(x){
 	x = *:4 sp;
 	sp = sp + 4;
 }
 
+#########################################################################################################
 # Instructions
+#########################################################################################################
 define pcodeop MOBJ1;
 define pcodeop MOBJ2;
 define pcodeop MOBJ3;
@@ -69,60 +84,90 @@ define pcodeop MOBJ3;
         MOBJ3(imm32t);
 }
 
+#########################################################################################################
 # PUSH
+#########################################################################################################
 # @TODO: Clean these up, we can reduce how many we define by using bitmasks.
 
 :PUSH imm8t             is OP=0x17 ; imm8t {
-        r0 = imm8t;
+        #r0 = imm8t;
+        local val = imm8t;
+        push(val);
 }
 :PUSH imm16t            is OP=0x27 ; imm16t {
-        r0 = imm16t;
+        #r0 = imm16t;
+        local val = imm16t;
+        push(val);        
 }
 :PUSH imm32t            is OP=0x37 ; imm32t {
-        r0 = imm32t;
+        #r0 = imm32t;
+        local val = imm32t;
+        push(val);         
 }
 :PUSH imm8t             is OP=0x50 ; imm8t {
-        r0 = imm8t;
+        local val = imm8t;
+        push(val);
 }
 :PUSH imm8t             is OP=0x51 ; imm8t {
-        r0 = imm8t;
+        #r0 = imm8t;
+        local val = imm8t;
+        push(val);
 }
 :PUSH imm16t            is OP=0x52 ; imm16t {
-        r0 = imm16t;
+        local val = imm16t;
+        push(val);
 }
 :PUSH imm32t            is OP=0x53 ; imm32t {
-        r0 = imm32t;
+        #r0 = imm32t;
+        local val = imm32t;
+        push(val); 
 }
 :PUSH imm8t             is OP=0x5E ; imm8t {
-        r0 = imm8t;
+        local val = imm8t;
+        push(val);
 }
 :PUSH imm16t             is OP=0x60 ; imm16t {
-        r0 = imm16t;
+        #r0 = imm16t;
+        local val = imm16t;
+        push(val); 
 }
 :PUSH imm8t             is OP=0x61 ; imm8t {
-        r0 = imm8t;
+        local val = imm8t;
+        push(val);
 }
 :PUSH imm16t            is OP=0x62 ; imm16t {
-        r0 = imm16t;
+        #r0 = imm16t;
+        local val = imm16t;
+        push(val); 
 }
 :PUSH imm32t            is OP=0x63 ; imm32t {
-        r0 = imm32t;
+        #r0 = imm32t;
+        local val = imm32t;
+        push(val); 
 }
 :PUSH imm32t             is OP=0x70 ; imm32t {
-        r0 = imm32t;
+        #r0 = imm32t;
+        local val = imm32t;
+        push(val); 
 }
 :PUSH imm8t             is OP=0x71 ; imm8t {
-        r0 = imm8t;
+        local val = imm8t;
+        push(val);
 }
 :PUSH imm16t            is OP=0x72 ; imm16t {
-        r0 = imm16t;
+        #r0 = imm16t;
+        local val = imm16t;
+        push(val); 
 }
 :PUSH imm32t            is OP=0x73 ; imm32t {
-        r0 = imm32t;        
+        #r0 = imm32t;
+        local val = imm32t;
+        push(val);      
 }
 
+#########################################################################################################
 # ADD SP, #X
-
+#########################################################################################################
 :ADD "SP, " imm8t             is OP=0x13 ; imm8t {
         sp = sp + imm8t;
 }
@@ -133,29 +178,31 @@ define pcodeop MOBJ3;
         sp = sp + imm32t;
 }
 
+#########################################################################################################
 # JMP
+#########################################################################################################
 
 # JMP by IMM + other val
 :JMP imm8t             is OP=0x14 ; imm8t {
-        local dest = imm8t + inst_next;
+        local dest = imm8t + inst_next + 1;
         goto [dest];
 }
 :JMP imm16t            is OP=0x24 ; imm16t {
-        local dest = imm16t + inst_next;
+        local dest = imm16t + inst_next + 1;
         goto [dest];
 }
 :JMP imm32t            is OP=0x34 ; imm32t {
-        local dest = imm32t + inst_next;
+        local dest = imm32t + inst_next  +1;
         goto [dest];
 }
 
 # JMP by IMM
 :JMP imm8t             is OP=0x15 ; imm8t {
-        local dest = imm8t + inst_next;
+        local dest = imm8t + inst_next +1;
         goto [dest];
 }
 :JMP imm16t            is OP=0x25 ; imm16t {
-        local dest = imm16t + inst_next;
+        local dest = imm16t + inst_next +1;
         goto [dest];
 }
 :JMP imm32t            is OP=0x35 ; imm32t {
@@ -165,25 +212,27 @@ define pcodeop MOBJ3;
 
 # IF R14 is zero, then JMP...
 :JZ imm8t             is OP=0x16 ; imm8t {
-        local dest = imm8t + inst_next;
+        local dest = imm8t + inst_next +1;
         if ( r14 != 0 ) goto <skip>;
         goto [dest];
         <skip>
 }
 :JZ imm16t            is OP=0x26 ; imm16t {
-        local dest = imm16t + inst_next;
+        local dest = imm16t + inst_next +1;
         if ( r14 != 0 ) goto <skip>;
         goto [dest];
         <skip>
 }
 :JZ imm32t            is OP=0x36 ; imm32t {
-        local dest = imm32t + inst_next;
+        local dest = imm32t + inst_next +1;
         if ( r14 != 0 ) goto <skip>;
         goto [dest];
         <skip>
 }
 
+#########################################################################################################
 # CALL
+#########################################################################################################
 
 :CALL imm8t             is OP=0x19 ; imm8t unimpl
 :CALL imm16t            is OP=0x29 ; imm16t unimpl
@@ -197,6 +246,15 @@ define pcodeop ShenmueFunc;
 
 # Shenmue Fn Table
 :CALL_SSF imm8t             is OP=0x1B ; imm8t {
+
+        # tmp:4 = &r1 + 4; 
+        # r1 = *[register]tmp;
+        
+        # The above is a contrived example of using the address-of operator to copy from a register that is not explicitly indicated by the instruction. 
+        # This example constructs the address of the register following r1 within the register space, and then loads r1 with data from that address. 
+        # The net effect of all this is that the register following r1 is copied into r1, even though it is not mentioned directly in the instruction. 
+        # Notice that the address-of operator only produces the offset portion of the address, and to copy the desired value, the ‘*’ operator must have a register space override. 
+
         ShenmueFunc(imm8t, r0, r1, r2, r3);
 }
 :CALL_SSF imm16t            is OP=0x2B ; imm16t {
@@ -221,12 +279,103 @@ define pcodeop ShenmueFunc;
         return [tmp];
 }
 
+#########################################################################################################
 # Operators
+#########################################################################################################
+
+#0x8E 	        1000 1110 	~
+:NEG           is OP=0x8E {
+        r0 = ~r0;
+}
+
+#0x8F 	        1000 1111 	&=
+:AND        is OP=0x8F  {
+        r1 = r1 & r0;
+}
+
+#0x90 	        1001 0000 	|
+:OR         is OP=0x90  {
+        r1 = r1 | r0;
+}
+
+#0x91 	        1001 0001 	^=
+:XOR         is OP=0x91  {
+        r1 = r1 ^ r0;
+}
+
+#0x92 	        1001 0010 	+=
+:ADD          is OP=0x92  {
+        r1 = r1 + r0;
+}
+
+#0x93 	        1001 0011 	-=
+:SUB         is OP=0x93  {
+        r1 = r1 - r0;
+}
+
+#0x94 	        1001 0100 	*=
+:MUL         is OP=0x94  {
+        r1 = r1 * r0;
+}
+
+#0x95 	        1001 0101 	/=
+:DIV         is OP=0x95  {
+        r1 = r1 / r0;
+}
+
+#0x96 	        1001 0110 	%=
+:MOD         is OP=0x96  {
+        r1 = r1 % r0;
+}
+
+#0x97 	        1001 0111 	<<=
+:LSHIFT        is OP=0x97  {
+        r1 = r1 << r0;
+}
+
+#0x98 	        1001 1000 	>>=
+:RSHIFT        is OP=0x98  {
+        r1 =  r1 >> r0;
+}
+
+#0x9D 	        1001 1101 	float cast
+:CAST_FLOAT        is OP=0x9D  {
+        r0 = int2float(r0);
+}
+
+#0xA3 	        1010 0011 	(float) +
+:FADD        is OP=0xA3  {
+        r1 = r0 f+ r1;
+}
+
+#0xA4 	        1010 0100 	(float) -
+:FSUB        is OP=0xA4  {
+        r1 = r0 f- r1;
+}
+
+#0xA5 	        1010 0101 	(float) *
+:FMUL        is OP=0xA5  {
+        r1 = r0 f* r1;
+}
+
+#0xA6 	        1010 0110 	(float) / 
+:FDIV        is OP=0xA6  {
+        r1 = r0 f/ r1;
+}
+
+#########################################################################################################
+# Incomplete
+#########################################################################################################
+
+#0x80 	        1000 0000 	Write stack value to R14
+:writeR14        is OP=0x80  unimpl
+
+#0x81 	        1000 0001 	Read R14 value to stack
+:readR14        is OP=0x81  unimpl
 
 #0x88 	        1000 1000 	==
+#curr_stack->R1 = (curr_stack->R1 != curr_stack->R0) - 1;
 :IS_EQU          is OP=0x88  unimpl
-        #curr_stack->R1 = (curr_stack->R1 != curr_stack->R0) - 1;
-
 
 #0x89 	        1000 1001 	!=
 :IS_NEQ          is OP=0x89  unimpl
@@ -243,109 +392,21 @@ define pcodeop ShenmueFunc;
 #0x8D 	        1000 1101 	<
 :IS_LT           is OP=0x8D  unimpl
 
-#0x8E 	        1000 1110 	~
-:ONESCOMP           is OP=0x8E {
-        r0 = ~r0;
-}
-
-#0x8F 	        1000 1111 	&=
-:ANDEQ        is OP=0x8F  {
-        r1 = r1 & r0;
-}
-
-#0x90 	        1001 0000 	=
-:EQ         is OP=0x90  unimpl
-
-#0x91 	        1001 0001 	^=
-:XOR_EQ         is OP=0x91  {
-        r1 = r1 ^ r0;
-}
-
-#0x92 	        1001 0010 	+=
-:ADD_EQ          is OP=0x92  {
-        r1 = r1 + r0;
-}
-
-#0x93 	        1001 0011 	-=
-:SUB_EQ         is OP=0x93  {
-        r1 = r1 - r0;
-}
-
-#0x94 	        1001 0100 	*=
-:MUL_EQ         is OP=0x94  {
-        r1 = r1 * r0;
-}
-
-#0x95 	        1001 0101 	/=
-:DIV_EQ         is OP=0x95  {
-        r1 = r1 / r0;
-}
-
-#0x96 	        1001 0110 	%=
-:MOD_EQ         is OP=0x96  {
-        r1 = r1 % r0;
-}
-
-#0x97 	        1001 0111 	<<=
-:LSHIFT_EQ        is OP=0x97  {
-        r1 = r1 << r0;
-}
-
-#0x98 	        1001 1000 	>>=
-:RSHIFT_EQ        is OP=0x98  {
-        r1 =  r1 >> r0;
-}
-
-#0x9D 	        1001 1101 	float cast
-:CAST_FLOAT        is OP=0x9D  {
-        r0 = int2float(r0);
-}
-
 #0x9E 	        1001 1110 	signed cast
 :CAST_SIGN        is OP=0x9E  unimpl
 
 #0x9F 	        1001 1111 	(float) <=
-:flteq        is OP=0x9F  {
-        #r1 = r0 <= r1 - 1;
-}
+:FLTEQ        is OP=0x9F  unimpl
 
 #0xA0 	        1010 0000 	(float) <
-:flt        is OP=0xA0  unimpl
+:FLT        is OP=0xA0  unimpl
 
 #0xA1 	        1010 0001 	(float) >= (<= inverted)
-:fgteq        is OP=0xA1  unimpl
+:FGTEQ        is OP=0xA1  unimpl
 
 #0xA2 	        1010 0010 	(float) > (< inverted)
-:fgt        is OP=0xA2  unimpl
+:FGT        is OP=0xA2  unimpl
 
-#0xA3 	        1010 0011 	(float) +
-:fadd        is OP=0xA3  {
-        r1 = r0 f+ r1;
-}
-
-#0xA4 	        1010 0100 	(float) -
-:fsub        is OP=0xA4  {
-        r1 = r0 f- r1;
-}
-
-#0xA5 	        1010 0101 	(float) *
-:fmul        is OP=0xA5  {
-        r1 = r0 f* r1;
-}
-
-#0xA6 	        1010 0110 	(float) / 
-:fdiv        is OP=0xA6  {
-        r1 = r0 f/ r1;
-}
-
-#0x80 	        1000 0000 	Write stack value to R14
-:writeR14        is OP=0x80  unimpl
-
-#0x81 	        1000 0001 	Read R14 value to stack
-:readR14        is OP=0x81  unimpl
-
-
-# Incomplete
 #0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
 #0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
 #0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
