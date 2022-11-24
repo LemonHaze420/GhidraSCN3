@@ -32,13 +32,10 @@ imm32t:         "#"^imm32        is imm32        { tmp:4 = imm32; export tmp; }
 macro push(x){
         local oldR2 = r2;
         r3 = oldR2;
-        
         local oldR1 = r1;
         r2 = oldR1;
-        
         local oldR0 = r0;
         r1 = oldR0;
-        
         r0 = x;    
         
 	#sp = sp - 4;
@@ -55,6 +52,7 @@ macro pop(x){
 define pcodeop MOBJ1;
 define pcodeop MOBJ2;
 define pcodeop MOBJ3;
+define pcodeop ShenmueFunc;
 
 :MOBJ1 imm8t             is OP=0x10 ; imm8t {
         MOBJ1(imm8t);
@@ -88,6 +86,7 @@ define pcodeop MOBJ3;
 # PUSH
 #########################################################################################################
 # @TODO: Clean these up, we can reduce how many we define by using bitmasks.
+
 
 :PUSH imm8t             is OP=0x17 ; imm8t {
         #r0 = imm8t;
@@ -164,6 +163,13 @@ define pcodeop MOBJ3;
         local val = imm32t;
         push(val);      
 }
+
+
+
+
+
+
+
 
 #########################################################################################################
 # ADD SP, #X
@@ -242,8 +248,6 @@ define pcodeop MOBJ3;
 :CALL imm16t            is OP=0x2A ; imm16t unimpl
 :CALL imm32t            is OP=0x3A ; imm32t unimpl
 
-define pcodeop ShenmueFunc;
-
 # Shenmue Fn Table
 :CALL_SSF imm8t             is OP=0x1B ; imm8t {
 
@@ -255,13 +259,16 @@ define pcodeop ShenmueFunc;
         # The net effect of all this is that the register following r1 is copied into r1, even though it is not mentioned directly in the instruction. 
         # Notice that the address-of operator only produces the offset portion of the address, and to copy the desired value, the ‘*’ operator must have a register space override. 
 
-        ShenmueFunc(imm8t, r0, r1, r2, r3);
+        ShenmueFunc(imm8t, sp);
+        # ShenmueFunc(imm8t, r0, r1, r2, r3);
 }
 :CALL_SSF imm16t            is OP=0x2B ; imm16t {
-        ShenmueFunc(imm16t, r0, r1, r2, r3);
+        ShenmueFunc(imm16t, sp);
+        # ShenmueFunc(imm16t, r0, r1, r2, r3);
 }
 :CALL_SSF imm32t            is OP=0x3B ; imm32t {
-        ShenmueFunc(imm32t, r0, r1, r2, r3);
+        ShenmueFunc(imm32t, sp);
+        # ShenmueFunc(imm32t, r0, r1, r2, r3);
 }
 
 :CALL imm8t             is OP=0x1C ; imm8t unimpl
@@ -283,82 +290,51 @@ define pcodeop ShenmueFunc;
 # Operators
 #########################################################################################################
 
-#0x8E 	        1000 1110 	~
 :NEG           is OP=0x8E {
         r0 = ~r0;
 }
-
-#0x8F 	        1000 1111 	&=
 :AND        is OP=0x8F  {
         r1 = r1 & r0;
 }
-
-#0x90 	        1001 0000 	|
 :OR         is OP=0x90  {
         r1 = r1 | r0;
 }
-
-#0x91 	        1001 0001 	^=
 :XOR         is OP=0x91  {
         r1 = r1 ^ r0;
 }
-
-#0x92 	        1001 0010 	+=
 :ADD          is OP=0x92  {
         r1 = r1 + r0;
 }
-
-#0x93 	        1001 0011 	-=
 :SUB         is OP=0x93  {
         r1 = r1 - r0;
 }
-
-#0x94 	        1001 0100 	*=
 :MUL         is OP=0x94  {
         r1 = r1 * r0;
 }
-
-#0x95 	        1001 0101 	/=
 :DIV         is OP=0x95  {
         r1 = r1 / r0;
 }
-
-#0x96 	        1001 0110 	%=
 :MOD         is OP=0x96  {
         r1 = r1 % r0;
 }
-
-#0x97 	        1001 0111 	<<=
 :LSHIFT        is OP=0x97  {
         r1 = r1 << r0;
 }
-
-#0x98 	        1001 1000 	>>=
 :RSHIFT        is OP=0x98  {
         r1 =  r1 >> r0;
 }
-
-#0x9D 	        1001 1101 	float cast
 :CAST_FLOAT        is OP=0x9D  {
         r0 = int2float(r0);
 }
-
-#0xA3 	        1010 0011 	(float) +
 :FADD        is OP=0xA3  {
         r1 = r0 f+ r1;
 }
-
-#0xA4 	        1010 0100 	(float) -
 :FSUB        is OP=0xA4  {
         r1 = r0 f- r1;
 }
-
-#0xA5 	        1010 0101 	(float) *
 :FMUL        is OP=0xA5  {
         r1 = r0 f* r1;
 }
-
-#0xA6 	        1010 0110 	(float) / 
 :FDIV        is OP=0xA6  {
         r1 = r0 f/ r1;
 }
@@ -381,36 +357,51 @@ define pcodeop ShenmueFunc;
 :IS_NEQ          is OP=0x89  unimpl
 
 #0x8A 	        1000 1010 	>=
-:IS_GTEQ         is OP=0x8A  unimpl
+:gt"/eq"         is OP=0x8A  unimpl
 
 #0x8B 	        1000 1011 	>
-:IS_GT           is OP=0x8B  unimpl
+:gt           is OP=0x8B  unimpl
 
 #0x8C 	        1000 1100 	<=
-:IS_LTEQ         is OP=0x8C  unimpl
+:lt"/eq"         is OP=0x8C  unimpl
 
 #0x8D 	        1000 1101 	<
-:IS_LT           is OP=0x8D  unimpl
+:lt           is OP=0x8D  unimpl
 
 #0x9E 	        1001 1110 	signed cast
 :CAST_SIGN        is OP=0x9E  unimpl
 
 #0x9F 	        1001 1111 	(float) <=
-:FLTEQ        is OP=0x9F  unimpl
+:flt"/eq"        is OP=0x9F  unimpl
 
 #0xA0 	        1010 0000 	(float) <
-:FLT        is OP=0xA0  unimpl
+:f"/lt"        is OP=0xA0  unimpl
 
 #0xA1 	        1010 0001 	(float) >= (<= inverted)
-:FGTEQ        is OP=0xA1  unimpl
+:fgt"/eq"        is OP=0xA1  unimpl
 
 #0xA2 	        1010 0010 	(float) > (< inverted)
-:FGT        is OP=0xA2  unimpl
+:f"/gt"        is OP=0xA2  unimpl
 
 #0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
+:RD8CYCL        is OP=0x82  unimpl
+
 #0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
+:RD16CYCL        is OP=0x83  unimpl
+
 #0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
+:RD32CYCL        is OP=0x84  unimpl
+
 #0x85 	        1000 0101 	[MOBJ] Writes 8-bit to cycle pointer
+:WR8CYCL         is OP=0x85  unimpl
+
 #0x86 	        1000 0110 	[MOBJ] Writes 16-bit to cycle pointer
+:WR16CYCL        is OP=0x86  unimpl
+
 #0x87 	        1000 0111 	[MOBJ] Writes 32-bit to cycle pointer
+:WR32CYCL        is OP=0x87  unimpl
+
+
+
+
 #0x40 - 0x4F 	0100 xxxx 	Writes value from last time to stack
