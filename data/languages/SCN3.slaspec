@@ -29,17 +29,45 @@ imm8t:          "#"^imm8         is imm8         { tmp:4 = imm8; export tmp; }
 imm16t:         "#"^imm16        is imm16        { tmp:4 = imm16; export tmp; }
 imm32t:         "#"^imm32        is imm32        { tmp:4 = imm32; export tmp; }
 
+macro getStackValue(i,v) {
+        v = *[register]sp + (4 * i);
+}
+macro setStackValue(i,v) {
+        *[register]sp + (4 * i) = v;
+}
+
+macro stackSim_r0(i) {
+        if ( i >= 4 ) goto <set>;
+        goto <skip>;
+        <set>
+        r0 = 0;
+        <skip>
+}
+macro stackSim_r1(i) {
+        if ( i >= 8 ) goto <set>;
+        goto <skip>;
+        <set>
+        r1 = 0;
+        <skip>
+}
+macro stackSim_r2(i) {
+        if ( i >= 12 ) goto <set>;
+        goto <skip>;
+        <set>
+        r2 = 0;
+        <skip>
+}
+macro stackSim_r3(i) {
+        if ( i >= 16 ) goto <set>;
+        goto <skip>;
+        <set>
+        r3 = 0;
+        <skip>
+}
+
 macro push(x){
-        local oldR2 = r2;
-        r3 = oldR2;
-        local oldR1 = r1;
-        r2 = oldR1;
-        local oldR0 = r0;
-        r1 = oldR0;
-        r0 = x;    
-        
-	#sp = sp - 4;
-	#*:4 sp = x;  
+	sp = sp - 4;
+	*:4 sp = x;  
 }
 macro pop(x){
 	x = *:4 sp;
@@ -88,8 +116,17 @@ define pcodeop ShenmueFunc;
 # @TODO: Clean these up, we can reduce how many we define by using bitmasks.
 
 
+# (opcode & 0xc0) == 128 ? opcode & 0x3f == 0			is POP EAX
+# (opcode & 0xc0) == 128 ? opcode & 0x3f == 1			is PUSH EAX
+
+:PUSH r14             is OP=0x81 {
+       push(r14); 
+}
+:POP r14             is OP=0x80 {
+        pop(r14);
+}
+
 :PUSH imm8t             is OP=0x17 ; imm8t {
-        #r0 = imm8t;
         local val = imm8t;
         push(val);
 }
@@ -125,6 +162,14 @@ define pcodeop ShenmueFunc;
         local val = imm8t;
         push(val);
 }
+:PUSH imm8t             is OP=0x5C ; imm8t {
+        local val = imm8t;
+        push(val);
+}
+:PUSH imm8t             is OP=0x5F ; imm8t {
+        local val = imm8t;
+        push(val);
+}
 :PUSH imm16t             is OP=0x60 ; imm16t {
         #r0 = imm16t;
         local val = imm16t;
@@ -143,6 +188,19 @@ define pcodeop ShenmueFunc;
         #r0 = imm32t;
         local val = imm32t;
         push(val); 
+}
+:PUSH imm16t            is OP=0x68 ; imm16t {
+        #r0 = imm16t;
+        local val = imm16t;
+        push(val); 
+}
+:PUSH imm16t             is OP=0x6A ; imm16t {
+        local val = imm16t;
+        push(val);
+}
+:PUSH imm16t             is OP=0x6B ; imm16t {
+        local val = imm16t;
+        push(val);
 }
 :PUSH imm32t             is OP=0x70 ; imm32t {
         #r0 = imm32t;
@@ -164,24 +222,47 @@ define pcodeop ShenmueFunc;
         push(val);      
 }
 
+#0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
+:RD8CYCL        is OP=0x82  unimpl
 
+#0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
+:RD16CYCL        is OP=0x83  unimpl
 
+#0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
+:RD32CYCL        is OP=0x84  unimpl
 
+#0x85 	        1000 0101 	[MOBJ] Writes 8-bit to cycle pointer
+:WR8CYCL         is OP=0x85  unimpl
 
+#0x86 	        1000 0110 	[MOBJ] Writes 16-bit to cycle pointer
+:WR16CYCL        is OP=0x86  unimpl
 
-
+#0x87 	        1000 0111 	[MOBJ] Writes 32-bit to cycle pointer
+:WR32CYCL        is OP=0x87  unimpl
 
 #########################################################################################################
 # ADD SP, #X
 #########################################################################################################
 :ADD "SP, " imm8t             is OP=0x13 ; imm8t {
         sp = sp + imm8t;
+        #stackSim_r0(imm8t);
+        #stackSim_r1(imm8t);
+        #stackSim_r2(imm8t);
+        #stackSim_r3(imm8t);
 }
 :ADD "SP, " imm16t            is OP=0x23 ; imm16t {
         sp = sp + imm16t;
+        #stackSim_r0(imm16t);       
+        #stackSim_r1(imm16t);       
+        #stackSim_r2(imm16t);       
+        #stackSim_r3(imm16t);       
 }
 :ADD "SP, " imm32t            is OP=0x33 ; imm32t {
         sp = sp + imm32t;
+        #stackSim_r0(imm32t);        
+        #stackSim_r1(imm32t);        
+        #stackSim_r2(imm32t);        
+        #stackSim_r3(imm32t);        
 }
 
 #########################################################################################################
@@ -190,25 +271,25 @@ define pcodeop ShenmueFunc;
 
 # JMP by IMM + other val
 :JMP imm8t             is OP=0x14 ; imm8t {
-        local dest = imm8t + inst_next + 1;
+        local dest = imm8t + inst_next;
         goto [dest];
 }
 :JMP imm16t            is OP=0x24 ; imm16t {
-        local dest = imm16t + inst_next + 1;
+        local dest = imm16t + inst_next;
         goto [dest];
 }
 :JMP imm32t            is OP=0x34 ; imm32t {
-        local dest = imm32t + inst_next  +1;
+        local dest = imm32t + inst_next;
         goto [dest];
 }
 
 # JMP by IMM
 :JMP imm8t             is OP=0x15 ; imm8t {
-        local dest = imm8t + inst_next +1;
+        local dest = imm8t + inst_next;
         goto [dest];
 }
 :JMP imm16t            is OP=0x25 ; imm16t {
-        local dest = imm16t + inst_next +1;
+        local dest = imm16t + inst_next;
         goto [dest];
 }
 :JMP imm32t            is OP=0x35 ; imm32t {
@@ -218,19 +299,19 @@ define pcodeop ShenmueFunc;
 
 # IF R14 is zero, then JMP...
 :JZ imm8t             is OP=0x16 ; imm8t {
-        local dest = imm8t + inst_next +1;
+        local dest = imm8t + inst_next;
         if ( r14 != 0 ) goto <skip>;
         goto [dest];
         <skip>
 }
 :JZ imm16t            is OP=0x26 ; imm16t {
-        local dest = imm16t + inst_next +1;
+        local dest = imm16t + inst_next;
         if ( r14 != 0 ) goto <skip>;
         goto [dest];
         <skip>
 }
 :JZ imm32t            is OP=0x36 ; imm32t {
-        local dest = imm32t + inst_next +1;
+        local dest = imm32t + inst_next;
         if ( r14 != 0 ) goto <skip>;
         goto [dest];
         <skip>
@@ -250,35 +331,83 @@ define pcodeop ShenmueFunc;
 
 # Shenmue Fn Table
 :CALL_SSF imm8t             is OP=0x1B ; imm8t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
 
-        # tmp:4 = &r1 + 4; 
-        # r1 = *[register]tmp;
-        
-        # The above is a contrived example of using the address-of operator to copy from a register that is not explicitly indicated by the instruction. 
-        # This example constructs the address of the register following r1 within the register space, and then loads r1 with data from that address. 
-        # The net effect of all this is that the register following r1 is copied into r1, even though it is not mentioned directly in the instruction. 
-        # Notice that the address-of operator only produces the offset portion of the address, and to copy the desired value, the ‘*’ operator must have a register space override. 
-
-        ShenmueFunc(imm8t, sp);
-        # ShenmueFunc(imm8t, r0, r1, r2, r3);
+        ShenmueFunc(imm8t, val1, val2, val3, val4);
 }
 :CALL_SSF imm16t            is OP=0x2B ; imm16t {
-        ShenmueFunc(imm16t, sp);
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        ShenmueFunc(imm16t, val1, val2, val3, val4);
         # ShenmueFunc(imm16t, r0, r1, r2, r3);
 }
 :CALL_SSF imm32t            is OP=0x3B ; imm32t {
-        ShenmueFunc(imm32t, sp);
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        ShenmueFunc(imm32t, val1, val2, val3, val4);
         # ShenmueFunc(imm32t, r0, r1, r2, r3);
 }
 
-:CALL imm8t             is OP=0x1C ; imm8t unimpl
-:CALL imm16t            is OP=0x2C ; imm16t unimpl
-:CALL imm32t            is OP=0x3C ; imm32t unimpl
+define pcodeop CallTblFn0;
 
-:CALL imm8t             is OP=0x1D ; imm8t unimpl
-:CALL imm16t            is OP=0x2D ; imm16t unimpl
-:CALL imm32t            is OP=0x3D ; imm32t unimpl
+:CALL imm8t             is OP=0x1C ; imm8t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
 
+        CallTblFn0(imm8t, val1, val2, val3, val4);
+}
+:CALL imm16t            is OP=0x2C ; imm16t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        CallTblFn0(imm16t, val1, val2, val3, val4);
+}
+:CALL imm32t            is OP=0x3C ; imm32t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        CallTblFn0(imm32t, val1, val2, val3, val4);
+}
+
+:CALL imm8t             is OP=0x1D ; imm8t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        CallTblFn0(imm8t, val1, val2, val3, val4);
+}
+:CALL imm16t            is OP=0x2D ; imm16t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        CallTblFn0(imm16t, val1, val2, val3, val4);
+}
+:CALL imm32t            is OP=0x3D ; imm32t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        CallTblFn0(imm32t, val1, val2, val3, val4);
+}
 
 # Invalid Opcode
 :RET            is OP=0x00 {
@@ -290,64 +419,58 @@ define pcodeop ShenmueFunc;
 # Operators
 #########################################################################################################
 
-:NEG           is OP=0x8E {
+:NEG "r0"           is OP=0x8E {
         r0 = ~r0;
 }
-:AND        is OP=0x8F  {
+:AND "r1, r0"       is OP=0x8F  {
         r1 = r1 & r0;
 }
-:OR         is OP=0x90  {
+:OR  "r1, r0"       is OP=0x90  {
         r1 = r1 | r0;
 }
-:XOR         is OP=0x91  {
+:XOR "r1, r0"        is OP=0x91  {
         r1 = r1 ^ r0;
 }
-:ADD          is OP=0x92  {
+:ADD "r1, r0"         is OP=0x92  {
         r1 = r1 + r0;
 }
-:SUB         is OP=0x93  {
+:SUB "r1, r0"        is OP=0x93  {
         r1 = r1 - r0;
 }
-:MUL         is OP=0x94  {
+:MUL "r1, r0"        is OP=0x94  {
         r1 = r1 * r0;
 }
-:DIV         is OP=0x95  {
+:DIV "r1, r0"        is OP=0x95  {
         r1 = r1 / r0;
 }
-:MOD         is OP=0x96  {
+:MOD "r1, r0"        is OP=0x96  {
         r1 = r1 % r0;
 }
-:LSHIFT        is OP=0x97  {
+:LSHIFT "r1, r0"       is OP=0x97  {
         r1 = r1 << r0;
 }
-:RSHIFT        is OP=0x98  {
+:RSHIFT "r1, r0"       is OP=0x98  {
         r1 =  r1 >> r0;
 }
-:CAST_FLOAT        is OP=0x9D  {
+:CAST_FLOAT "r0"       is OP=0x9D  {
         r0 = int2float(r0);
 }
-:FADD        is OP=0xA3  {
+:FADD   "r1, r0"     is OP=0xA3  {
         r1 = r0 f+ r1;
 }
-:FSUB        is OP=0xA4  {
+:FSUB   "r1, r0"     is OP=0xA4  {
         r1 = r0 f- r1;
 }
-:FMUL        is OP=0xA5  {
+:FMUL   "r1, r0"     is OP=0xA5  {
         r1 = r0 f* r1;
 }
-:FDIV        is OP=0xA6  {
+:FDIV   "r1, r0"     is OP=0xA6  {
         r1 = r0 f/ r1;
 }
 
 #########################################################################################################
 # Incomplete
 #########################################################################################################
-
-#0x80 	        1000 0000 	Write stack value to R14
-:writeR14        is OP=0x80  unimpl
-
-#0x81 	        1000 0001 	Read R14 value to stack
-:readR14        is OP=0x81  unimpl
 
 #0x88 	        1000 1000 	==
 #curr_stack->R1 = (curr_stack->R1 != curr_stack->R0) - 1;
@@ -382,26 +505,5 @@ define pcodeop ShenmueFunc;
 
 #0xA2 	        1010 0010 	(float) > (< inverted)
 :f"/gt"        is OP=0xA2  unimpl
-
-#0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
-:RD8CYCL        is OP=0x82  unimpl
-
-#0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
-:RD16CYCL        is OP=0x83  unimpl
-
-#0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
-:RD32CYCL        is OP=0x84  unimpl
-
-#0x85 	        1000 0101 	[MOBJ] Writes 8-bit to cycle pointer
-:WR8CYCL         is OP=0x85  unimpl
-
-#0x86 	        1000 0110 	[MOBJ] Writes 16-bit to cycle pointer
-:WR16CYCL        is OP=0x86  unimpl
-
-#0x87 	        1000 0111 	[MOBJ] Writes 32-bit to cycle pointer
-:WR32CYCL        is OP=0x87  unimpl
-
-
-
 
 #0x40 - 0x4F 	0100 xxxx 	Writes value from last time to stack

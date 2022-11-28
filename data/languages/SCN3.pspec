@@ -9,12 +9,12 @@
         </default_symbols>
         
         <context_data>
-            <tracked_set space="register_space" first="0x00000000" last="0xffffffff">
-                <set name="sp" val="0"/>
+            <tracked_set space="ram" first="0x00000000" last="0xffffffff">
                 <set name="r0" val="0"/>
                 <set name="r1" val="0"/>
                 <set name="r2" val="0"/>
                 <set name="r3" val="0"/>
+                <set name="sp" val="0"/>
             </tracked_set>
         </context_data>        
 </processor_spec>
