@@ -29,47 +29,27 @@ imm8t:          "#"^imm8         is imm8         { tmp:4 = imm8; export tmp; }
 imm16t:         "#"^imm16        is imm16        { tmp:4 = imm16; export tmp; }
 imm32t:         "#"^imm32        is imm32        { tmp:4 = imm32; export tmp; }
 
-macro getStackValue(i,v) {
-        v = *[register]sp + (4 * i);
-}
-macro setStackValue(i,v) {
-        *[register]sp + (4 * i) = v;
-}
-
-macro stackSim_r0(i) {
-        if ( i >= 4 ) goto <set>;
-        goto <skip>;
-        <set>
-        r0 = 0;
-        <skip>
-}
-macro stackSim_r1(i) {
-        if ( i >= 8 ) goto <set>;
-        goto <skip>;
-        <set>
-        r1 = 0;
-        <skip>
-}
-macro stackSim_r2(i) {
-        if ( i >= 12 ) goto <set>;
-        goto <skip>;
-        <set>
-        r2 = 0;
-        <skip>
-}
-macro stackSim_r3(i) {
-        if ( i >= 16 ) goto <set>;
-        goto <skip>;
-        <set>
-        r3 = 0;
-        <skip>
-}
-
-macro push(x){
+macro push32(x){
 	sp = sp - 4;
 	*:4 sp = x;  
 }
-macro pop(x){
+macro push16(x){
+	sp = sp - 4;
+	*:4 sp = x;  
+}
+macro push8(x){
+	sp = sp - 4;
+	*:4 sp = x;  
+}
+macro pop32(x){
+	x = *:4 sp;
+	sp = sp + 4;
+}
+macro pop16(x){
+	x = *:4 sp;
+	sp = sp + 4;
+}
+macro pop8(x){
 	x = *:4 sp;
 	sp = sp + 4;
 }
@@ -119,150 +99,150 @@ define pcodeop ShenmueFunc;
 # (opcode & 0xc0) == 128 ? opcode & 0x3f == 0			is POP EAX
 # (opcode & 0xc0) == 128 ? opcode & 0x3f == 1			is PUSH EAX
 
-:PUSH r14             is OP=0x81 {
-       push(r14); 
+:PUSH "r14"             is OP=0x81 {
+        push32(r14); 
 }
-:POP r14             is OP=0x80 {
-        pop(r14);
+:POP "r14"             is OP=0x80 {
+        pop32(r14);
 }
 
 :PUSH imm8t             is OP=0x17 ; imm8t {
         local val = imm8t;
-        push(val);
+        push8(val);
 }
 :PUSH imm16t            is OP=0x27 ; imm16t {
         #r0 = imm16t;
         local val = imm16t;
-        push(val);        
+        push16(val);        
 }
 :PUSH imm32t            is OP=0x37 ; imm32t {
         #r0 = imm32t;
         local val = imm32t;
-        push(val);         
+        push32(val);         
 }
 :PUSH imm8t             is OP=0x50 ; imm8t {
         local val = imm8t;
-        push(val);
+        push8(val);
 }
 :PUSH imm8t             is OP=0x51 ; imm8t {
         #r0 = imm8t;
         local val = imm8t;
-        push(val);
+        push8(val);
 }
 :PUSH imm16t            is OP=0x52 ; imm16t {
         local val = imm16t;
-        push(val);
+        push16(val);
 }
 :PUSH imm32t            is OP=0x53 ; imm32t {
         #r0 = imm32t;
         local val = imm32t;
-        push(val); 
+        push32(val); 
 }
 :PUSH imm8t             is OP=0x5E ; imm8t {
         local val = imm8t;
-        push(val);
+        push8(val);
 }
 :PUSH imm8t             is OP=0x5C ; imm8t {
         local val = imm8t;
-        push(val);
+        push8(val);
 }
 :PUSH imm8t             is OP=0x5F ; imm8t {
         local val = imm8t;
-        push(val);
+        push8(val);
 }
 :PUSH imm16t             is OP=0x60 ; imm16t {
         #r0 = imm16t;
         local val = imm16t;
-        push(val); 
+        push16(val); 
 }
 :PUSH imm8t             is OP=0x61 ; imm8t {
         local val = imm8t;
-        push(val);
+        push8(val);
 }
 :PUSH imm16t            is OP=0x62 ; imm16t {
         #r0 = imm16t;
         local val = imm16t;
-        push(val); 
+        push16(val); 
 }
 :PUSH imm32t            is OP=0x63 ; imm32t {
         #r0 = imm32t;
         local val = imm32t;
-        push(val); 
+        push32(val); 
 }
 :PUSH imm16t            is OP=0x68 ; imm16t {
         #r0 = imm16t;
         local val = imm16t;
-        push(val); 
+        push16(val); 
 }
 :PUSH imm16t             is OP=0x6A ; imm16t {
         local val = imm16t;
-        push(val);
+        push16(val);
 }
 :PUSH imm16t             is OP=0x6B ; imm16t {
         local val = imm16t;
-        push(val);
+        push16(val);
 }
 :PUSH imm32t             is OP=0x70 ; imm32t {
         #r0 = imm32t;
         local val = imm32t;
-        push(val); 
+        push32(val); 
 }
 :PUSH imm8t             is OP=0x71 ; imm8t {
         local val = imm8t;
-        push(val);
+        push8(val);
 }
 :PUSH imm16t            is OP=0x72 ; imm16t {
         #r0 = imm16t;
         local val = imm16t;
-        push(val); 
+        push16(val); 
 }
 :PUSH imm32t            is OP=0x73 ; imm32t {
         #r0 = imm32t;
         local val = imm32t;
-        push(val);      
+        push32(val);      
 }
 
 #0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
-:RD8CYCL        is OP=0x82  unimpl
+:RD8CYCL        is OP=0x82  {
+        # @ TODO
+}
 
 #0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
-:RD16CYCL        is OP=0x83  unimpl
+:RD16CYCL        is OP=0x83  {
+        # @ TODO
+}
 
 #0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
-:RD32CYCL        is OP=0x84  unimpl
+:RD32CYCL        is OP=0x84  {
+        # @ TODO
+}
 
 #0x85 	        1000 0101 	[MOBJ] Writes 8-bit to cycle pointer
-:WR8CYCL         is OP=0x85  unimpl
+:WR8CYCL         is OP=0x85  {
+        # @ TODO
+}
 
 #0x86 	        1000 0110 	[MOBJ] Writes 16-bit to cycle pointer
-:WR16CYCL        is OP=0x86  unimpl
+:WR16CYCL        is OP=0x86  {
+        # @ TODO
+}
 
 #0x87 	        1000 0111 	[MOBJ] Writes 32-bit to cycle pointer
-:WR32CYCL        is OP=0x87  unimpl
+:WR32CYCL        is OP=0x87  {
+        # @ TODO
+}
 
 #########################################################################################################
 # ADD SP, #X
 #########################################################################################################
 :ADD "SP, " imm8t             is OP=0x13 ; imm8t {
         sp = sp + imm8t;
-        #stackSim_r0(imm8t);
-        #stackSim_r1(imm8t);
-        #stackSim_r2(imm8t);
-        #stackSim_r3(imm8t);
 }
 :ADD "SP, " imm16t            is OP=0x23 ; imm16t {
-        sp = sp + imm16t;
-        #stackSim_r0(imm16t);       
-        #stackSim_r1(imm16t);       
-        #stackSim_r2(imm16t);       
-        #stackSim_r3(imm16t);       
+        sp = sp + imm16t;     
 }
 :ADD "SP, " imm32t            is OP=0x33 ; imm32t {
-        sp = sp + imm32t;
-        #stackSim_r0(imm32t);        
-        #stackSim_r1(imm32t);        
-        #stackSim_r2(imm32t);        
-        #stackSim_r3(imm32t);        
+        sp = sp + imm32t;       
 }
 
 #########################################################################################################
@@ -321,13 +301,59 @@ define pcodeop ShenmueFunc;
 # CALL
 #########################################################################################################
 
-:CALL imm8t             is OP=0x19 ; imm8t unimpl
-:CALL imm16t            is OP=0x29 ; imm16t unimpl
-:CALL imm32t            is OP=0x39 ; imm32t unimpl
+define pcodeop callSet2;
+define pcodeop callSet3;
 
-:CALL imm8t             is OP=0x1A ; imm8t unimpl
-:CALL imm16t            is OP=0x2A ; imm16t unimpl
-:CALL imm32t            is OP=0x3A ; imm32t unimpl
+:CALL imm8t             is OP=0x19 ; imm8t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        callSet3(imm8t, val1, val2, val3, val4);
+}
+
+:CALL imm16t            is OP=0x29 ; imm16t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        callSet3(imm16t, val1, val2, val3, val4);
+}
+:CALL imm32t            is OP=0x39 ; imm32t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        callSet3(imm32t, val1, val2, val3, val4);
+}
+
+:CALL imm8t             is OP=0x1A ; imm8t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        callSet2(imm8t, val1, val2, val3, val4);
+}
+:CALL imm16t            is OP=0x2A ; imm16t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        callSet2(imm16t, val1, val2, val3, val4);
+}
+:CALL imm32t            is OP=0x3A ; imm32t {
+        local val1:4 = *:4 sp;
+        local val2:4 = *:4 (sp + 4);
+        local val3:4 = *:4 (sp + 8);
+        local val4:4 = *:4 (sp + 12);
+
+        callSet2(imm32t, val1, val2, val3, val4);
+}
 
 # Shenmue Fn Table
 :CALL_SSF imm8t             is OP=0x1B ; imm8t {
@@ -473,37 +499,111 @@ define pcodeop CallTblFn0;
 #########################################################################################################
 
 #0x88 	        1000 1000 	==
-#curr_stack->R1 = (curr_stack->R1 != curr_stack->R0) - 1;
-:IS_EQU          is OP=0x88  unimpl
+:IS_EQU          is OP=0x88  {
+        local tr0:4 = *:4 (sp);
+        local tr1:4 = *:4 (sp + 4);
+        
+        if ( tr0 == tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        r14 = 1;
+        goto inst_next;
+        <false>
+        r14 = 0;
+}
 
 #0x89 	        1000 1001 	!=
-:IS_NEQ          is OP=0x89  unimpl
+:IS_NEQ          is OP=0x89  {
+        local tr0:4 = *:4 (sp);
+        local tr1:4 = *:4 (sp + 4);
+        
+        if ( tr0 != tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        r14 = 1;
+        goto inst_next;
+        <false>
+        r14 = 0;
+}
 
 #0x8A 	        1000 1010 	>=
-:gt"/eq"         is OP=0x8A  unimpl
+:gt"/eq"         is OP=0x8A  {
+        local tr0:4 = *:4 (sp);
+        local tr1:4 = *:4 (sp + 4);
+        
+        if ( tr0 >= tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        r14 = 1;
+        goto inst_next;
+        <false>
+        r14 = 0;
+}
 
 #0x8B 	        1000 1011 	>
-:gt           is OP=0x8B  unimpl
+:gt           is OP=0x8B  {
+        local tr0:4 = *:4 (sp);
+        local tr1:4 = *:4 (sp + 4);
+        
+        if ( tr0 > tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        r14 = 1;
+        goto inst_next;
+        <false>
+        r14 = 0;
+}
 
 #0x8C 	        1000 1100 	<=
-:lt"/eq"         is OP=0x8C  unimpl
+:lt"/eq"         is OP=0x8C  {
+        local tr0:4 = *:4 (sp);
+        local tr1:4 = *:4 (sp + 4);
+        
+        if ( tr0 <= tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        r14 = 1;
+        goto inst_next;
+        <false>
+        r14 = 0;
+}
 
 #0x8D 	        1000 1101 	<
-:lt           is OP=0x8D  unimpl
+:lt           is OP=0x8D  {
+        local tr0:4 = *:4 (sp);
+        local tr1:4 = *:4 (sp + 4);
+        
+        if ( tr0 < tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        r14 = 1;
+        goto inst_next;
+        <false>
+        r14 = 0;
+}
 
 #0x9E 	        1001 1110 	signed cast
-:CAST_SIGN        is OP=0x9E  unimpl
+:CAST_SIGN        is OP=0x9E  {
+        # @ TODO
+}
 
 #0x9F 	        1001 1111 	(float) <=
-:flt"/eq"        is OP=0x9F  unimpl
+:flt"/eq"        is OP=0x9F  {
+        # @ TODO
+}
 
 #0xA0 	        1010 0000 	(float) <
-:f"/lt"        is OP=0xA0  unimpl
+:f"/lt"        is OP=0xA0  {
+        # @ TODO
+}
 
 #0xA1 	        1010 0001 	(float) >= (<= inverted)
-:fgt"/eq"        is OP=0xA1  unimpl
-
+:fgt"/eq"        is OP=0xA1  {
+        # @ TODO
+}
 #0xA2 	        1010 0010 	(float) > (< inverted)
-:f"/gt"        is OP=0xA2  unimpl
+:f"/gt"        is OP=0xA2  {
+        # @ TODO
+}
 
 #0x40 - 0x4F 	0100 xxxx 	Writes value from last time to stack
