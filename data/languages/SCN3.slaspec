@@ -11,7 +11,7 @@ define alignment=1;
 define space ram        type=ram_space          size=4 default;
 define space register   type=register_space     size=4;
 
-define register offset=0x00 size=4 [ r0 r1 r2 r3 r14 sp ];
+define register offset=0x00 size=4 [ r0 r1 r2 r3 eax sp ];
 
 define token instr(8)
 	OP = (0, 7);
@@ -105,11 +105,11 @@ define pcodeop CallTblFn0;
 # (opcode & 0xc0) == 128 ? opcode & 0x3f == 0			is POP EAX
 # (opcode & 0xc0) == 128 ? opcode & 0x3f == 1			is PUSH EAX
 
-:PUSH "r14"             is OP=0x81 {
-        push32(r14); 
+:PUSH "EAX"             is OP=0x81 {
+        push32(eax); 
 }
-:POP "r14"             is OP=0x80 {
-        pop32(r14);
+:POP "EAX"             is OP=0x80 {
+        pop32(eax);
 }
 
 :PUSH imm8t             is OP=0x17 ; imm8t {
@@ -243,13 +243,16 @@ define pcodeop CallTblFn0;
 # ADD SP, #X
 #########################################################################################################
 :ADD "SP, " imm8t             is OP=0x13 ; imm8t {
-        sp = sp + imm8t;
+        i = 4 * (imm8t / 4);
+        sp = sp + i;
 }
 :ADD "SP, " imm16t            is OP=0x23 ; imm16t {
-        sp = sp + imm16t;     
+        i = 4 * (imm16t / 4);
+        sp = sp + i;     
 }
 :ADD "SP, " imm32t            is OP=0x33 ; imm32t {
-        sp = sp + imm32t;       
+        i = 4 * (imm32t / 4);
+        sp = sp + i;       
 }
 
 #########################################################################################################
@@ -280,15 +283,15 @@ define pcodeop CallTblFn0;
 
 # IF R14 is zero, then JMP...
 :JZ imm8t             is OP=0x16 ; imm8t {
-        if ( r14 != 0 ) goto inst_next;
+        if ( eax != 0 ) goto inst_next;
         goto [imm8t+inst_start];
 }
 :JZ imm16t            is OP=0x26 ; imm16t {
-        if ( r14 != 0 ) goto inst_next;
+        if ( eax != 0 ) goto inst_next;
         goto [imm16t+inst_start];
 }
 :JZ imm32t            is OP=0x36 ; imm32t {
-        if ( r14 != 0 ) goto inst_next;
+        if ( eax != 0 ) goto inst_next;
         goto [imm32t+inst_start];
 }
 
@@ -524,10 +527,10 @@ define pcodeop CallTblFn0;
         if ( tr0 == tr1 ) goto <true>;
         goto <false>;
         <true>
-        r14 = 1;
+        eax = 1;
         goto inst_next;
         <false>
-        r14 = 0;
+        eax = 0;
 }
 
 #0x89 	        1000 1001 	!=
@@ -538,10 +541,10 @@ define pcodeop CallTblFn0;
         if ( tr0 != tr1 ) goto <true>;
         goto <false>;
         <true>
-        r14 = 1;
+        eax = 1;
         goto inst_next;
         <false>
-        r14 = 0;
+        eax = 0;
 }
 
 #0x8A 	        1000 1010 	>=
@@ -552,10 +555,10 @@ define pcodeop CallTblFn0;
         if ( tr0 >= tr1 ) goto <true>;
         goto <false>;
         <true>
-        r14 = 1;
+        eax = 1;
         goto inst_next;
         <false>
-        r14 = 0;
+        eax = 0;
 }
 
 #0x8B 	        1000 1011 	>
@@ -566,10 +569,10 @@ define pcodeop CallTblFn0;
         if ( tr0 > tr1 ) goto <true>;
         goto <false>;
         <true>
-        r14 = 1;
+        eax = 1;
         goto inst_next;
         <false>
-        r14 = 0;
+        eax = 0;
 }
 
 #0x8C 	        1000 1100 	<=
@@ -580,10 +583,10 @@ define pcodeop CallTblFn0;
         if ( tr0 <= tr1 ) goto <true>;
         goto <false>;
         <true>
-        r14 = 1;
+        eax = 1;
         goto inst_next;
         <false>
-        r14 = 0;
+        eax = 0;
 }
 
 #0x8D 	        1000 1101 	<
@@ -594,10 +597,10 @@ define pcodeop CallTblFn0;
         if ( tr0 < tr1 ) goto <true>;
         goto <false>;
         <true>
-        r14 = 1;
+        eax = 1;
         goto inst_next;
         <false>
-        r14 = 0;
+        eax = 0;
 }
 
 #0x9E 	        1001 1110 	signed cast
