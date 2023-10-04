@@ -99,11 +99,6 @@ define pcodeop CallTblFn0;
 #########################################################################################################
 # PUSH
 #########################################################################################################
-# @TODO: Clean these up, we can reduce how many we define by using bitmasks.
-
-
-# (opcode & 0xc0) == 128 ? opcode & 0x3f == 0			is POP EAX
-# (opcode & 0xc0) == 128 ? opcode & 0x3f == 1			is PUSH EAX
 
 :PUSH "EAX"             is OP=0x81 {
         push32(eax); 
@@ -210,34 +205,22 @@ define pcodeop CallTblFn0;
 }
 
 #0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
-:RD8CYCL        is OP=0x82  {
-        # @ TODO
-}
+:RD8CYCL        is OP=0x82  unimpl
 
 #0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
-:RD16CYCL        is OP=0x83  {
-        # @ TODO
-}
+:RD16CYCL        is OP=0x83  unimpl
 
 #0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
-:RD32CYCL        is OP=0x84  {
-        # @ TODO
-}
+:RD32CYCL        is OP=0x84  unimpl
 
 #0x85 	        1000 0101 	[MOBJ] Writes 8-bit to cycle pointer
-:WR8CYCL         is OP=0x85  {
-        # @ TODO
-}
+:WR8CYCL         is OP=0x85  unimpl
 
 #0x86 	        1000 0110 	[MOBJ] Writes 16-bit to cycle pointer
-:WR16CYCL        is OP=0x86  {
-        # @ TODO
-}
+:WR16CYCL        is OP=0x86  unimpl
 
 #0x87 	        1000 0111 	[MOBJ] Writes 32-bit to cycle pointer
-:WR32CYCL        is OP=0x87  {
-        # @ TODO
-}
+:WR32CYCL        is OP=0x87  unimpl
 
 #########################################################################################################
 # ADD SP, #X
@@ -606,25 +589,65 @@ define pcodeop CallTblFn0;
 #0x9E 	        1001 1110 	signed cast
 :CAST_SIGN        is OP=0x9E  {
         # @ TODO
+        #  curr_stack->R0 = (int)*(float *)&curr_stack->R0;
+        local floored:4 = floor(float2float(*:4 (sp)));
+        *:4 (sp) = trunc(floored);        
 }
 
 #0x9F 	        1001 1111 	(float) <=
-:flt"/eq"        is OP=0x9F  {
-        # @ TODO
+:flt"/eq"        is OP=0x9F     {
+        local tr0:4 = float2float(*:4 (sp));
+        local tr1:4 = float2float(*:4 (sp + 4));
+        
+        if ( tr0 f<= tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        eax = 1;
+        goto inst_next;
+        <false>
+        eax = 0;
 }
 
 #0xA0 	        1010 0000 	(float) <
-:f"/lt"        is OP=0xA0  {
-        # @ TODO
+:f"/lt"        is OP=0xA0       {
+        local tr0:4 = float2float(*:4 (sp));
+        local tr1:4 = float2float(*:4 (sp + 4));
+        
+        if ( tr0 f< tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        eax = 1;
+        goto inst_next;
+        <false>
+        eax = 0;
 }
 
 #0xA1 	        1010 0001 	(float) >= (<= inverted)
-:fgt"/eq"        is OP=0xA1  {
-        # @ TODO
+:fgt"/eq"        is OP=0xA1     {
+        local tr0:4 = float2float(*:4 (sp));
+        local tr1:4 = float2float(*:4 (sp + 4));
+        
+        if ( tr0 f>= tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        eax = 1;
+        goto inst_next;
+        <false>
+        eax = 0;
 }
+
 #0xA2 	        1010 0010 	(float) > (< inverted)
-:f"/gt"        is OP=0xA2  {
-        # @ TODO
+:f"/gt"        is OP=0xA2       {
+        local tr0:4 = float2float(*:4 (sp));
+        local tr1:4 = float2float(*:4 (sp + 4));
+        
+        if ( tr0 f> tr1 ) goto <true>;
+        goto <false>;
+        <true>
+        eax = 1;
+        goto inst_next;
+        <false>
+        eax = 0;
 }
 
 #0x40 - 0x4F 	0100 xxxx 	Writes value from last time to stack
