@@ -11,7 +11,7 @@ define alignment=1;
 define space ram        type=ram_space          size=4 default;
 define space register   type=register_space     size=4;
 
-define register offset=0x00 size=4 [ r0 r1 r2 r3 eax sp ];
+define register offset=0x00 size=4 [ r0 r1 r2 r3 eax sp base ];
 
 define token instr(8)
 	OP = (0, 7);
@@ -101,10 +101,12 @@ define pcodeop CallTblFn0;
 #########################################################################################################
 
 :PUSH "EAX"             is OP=0x81 {
-        push32(eax); 
+        sp = sp - 4;
+        r0 = eax;
 }
 :POP "EAX"             is OP=0x80 {
-        pop32(eax);
+        eax = r0;
+        sp = sp + 4;
 }
 
 :PUSH imm8t             is OP=0x17 ; imm8t {
@@ -205,22 +207,47 @@ define pcodeop CallTblFn0;
 }
 
 #0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
-:RD8CYCL        is OP=0x82  unimpl
+:RD8CYCL        is OP=0x82   {
+        local offs = base + r0;
+        r0 = *:1 offs;
+}
 
 #0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
-:RD16CYCL        is OP=0x83  unimpl
+:RD16CYCL        is OP=0x83    {
+        local offs = base + r0;
+        r0 = *:2 offs;
+}
 
 #0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
-:RD32CYCL        is OP=0x84  unimpl
+:RD32CYCL        is OP=0x84     {
+        local offs = base + r0;
+        r0 = *:4 offs;
+}
 
 #0x85 	        1000 0101 	[MOBJ] Writes 8-bit to cycle pointer
-:WR8CYCL         is OP=0x85  unimpl
+:WR8CYCL         is OP=0x85  {
+        local offs = base + r1;
+        *:1 offs = r0;
+        r1 = r0;
+        sp = sp + 4;
+}
 
 #0x86 	        1000 0110 	[MOBJ] Writes 16-bit to cycle pointer
-:WR16CYCL        is OP=0x86  unimpl
+:WR16CYCL        is OP=0x86  {
+        local offs = base + r1;
+        *:2 offs = r0;
+        r1 = r0;
+        sp = sp + 4;
+}
 
 #0x87 	        1000 0111 	[MOBJ] Writes 32-bit to cycle pointer
-:WR32CYCL        is OP=0x87  unimpl
+:WR32CYCL        is OP=0x87 {
+        local offs = base + r1;
+        *:4 offs = r0;
+        r1 = r0;
+        sp = sp + 4;
+}
+
 
 #########################################################################################################
 # ADD SP, #X
@@ -340,7 +367,7 @@ define pcodeop CallTblFn0;
         local val3:4 = *:4 (sp + 8);
         local val4:4 = *:4 (sp + 12);
 
-        ShenmueFunc(imm8t, val1, val2, val3, val4);
+        eax = ShenmueFunc(imm8t, val1, val2, val3, val4);
 }
 :CALL_SSF imm16t            is OP=0x2B ; imm16t {
         local val1:4 = *:4 sp;
@@ -348,7 +375,7 @@ define pcodeop CallTblFn0;
         local val3:4 = *:4 (sp + 8);
         local val4:4 = *:4 (sp + 12);
 
-        ShenmueFunc(imm16t, val1, val2, val3, val4);
+        eax = ShenmueFunc(imm16t, val1, val2, val3, val4);
 }
 :CALL_SSF imm32t            is OP=0x3B ; imm32t {
         local val1:4 = *:4 sp;
@@ -356,7 +383,7 @@ define pcodeop CallTblFn0;
         local val3:4 = *:4 (sp + 8);
         local val4:4 = *:4 (sp + 12);
 
-        ShenmueFunc(imm32t, val1, val2, val3, val4);
+        eax = ShenmueFunc(imm32t, val1, val2, val3, val4);
 }
 
 :CALL imm8t             is OP=0x1C ; imm8t {
@@ -409,11 +436,12 @@ define pcodeop CallTblFn0;
         CallTblFn0(imm32t, val1, val2, val3, val4);
 }
 
-# Invalid Opcode
+# Invalid Opcodes
 :RET            is OP=0x00 {
         tmp:4 = 0;
         return [tmp];
 }
+:NOP            is OP=0xFF ; imm16t {}
 
 #########################################################################################################
 # Operators
