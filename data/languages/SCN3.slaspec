@@ -11,7 +11,8 @@ define alignment=1;
 define space ram        type=ram_space          size=4 default;
 define space register   type=register_space     size=4;
 
-define register offset=0x00 size=4 [ r0 r1 r2 r3 eax sp base ];
+define register offset=0x0 size=4 [ R0 R1 R2 R3 EAX ];
+define register offset=0x14 size=4 [ SP base ];
 
 define token instr(8)
 	OP = (0, 7);
@@ -25,33 +26,33 @@ define token immtoken4(32)
 #########################################################################################################
 # Macros 
 #########################################################################################################    
-imm8t:          "#"^imm8         is imm8         { tmp:4 = imm8; export tmp; }
-imm16t:         "#"^imm16        is imm16        { tmp:4 = imm16; export tmp; }
+imm8t:          "#"^imm8         is imm8         { tmp:1 = imm8; export tmp; }
+imm16t:         "#"^imm16        is imm16        { tmp:2 = imm16; export tmp; }
 imm32t:         "#"^imm32        is imm32        { tmp:4 = imm32; export tmp; }
 
 macro push32(x){
-	sp = sp - 4;
-	*:4 sp = x;  
+	SP = SP - 4;
+	*:4 SP = x;  
 }
 macro push16(x){
-	sp = sp - 4;
-	*:4 sp = x;  
+	SP = SP - 4;
+	*:4 SP = zext(x);  
 }
 macro push8(x){
-	sp = sp - 4;
-	*:4 sp = x;  
+	SP = SP - 4;
+	*:4 SP = zext(x);  
 }
 macro pop32(x){
-	x = *:4 sp;
-	sp = sp + 4;
+	x = *:4 SP;
+	SP = SP + 4;
 }
 macro pop16(x){
-	x = *:4 sp;
-	sp = sp + 4;
+	x = *:4 SP;
+	SP = SP + 4;
 }
 macro pop8(x){
-	x = *:4 sp;
-	sp = sp + 4;
+	x = *:4 SP;
+	SP = SP + 4;
 }
 
 #########################################################################################################
@@ -65,34 +66,43 @@ define pcodeop callSet3;
 define pcodeop ShenmueFunc;
 define pcodeop CallTblFn0;
 
-:MOBJ1 imm8t             is OP=0x10 ; imm8t {
-        MOBJ1(imm8t);
+:MOBJ1 [imm8t]             is OP=0x10 ; imm8t {
+        local v:1 = imm8t;
+        MOBJ1(v);
 }
-:MOBJ1 imm16t            is OP=0x20 ; imm16t {
-        MOBJ1(imm16t);
+:MOBJ1 [imm16t]            is OP=0x20 ; imm16t {
+        local v:2 = imm16t;
+        MOBJ1(v);
 }
-:MOBJ1 imm32t            is OP=0x30 ; imm32t {
-        MOBJ1(imm32t);
-}
-
-:MOBJ2 imm8t             is OP=0x11 ; imm8t {
-        MOBJ2(imm8t);
-}
-:MOBJ2 imm16t            is OP=0x21 ; imm16t {
-        MOBJ2(imm16t);
-}
-:MOBJ2 imm32t            is OP=0x31 ; imm32t {
-        MOBJ2(imm32t);
+:MOBJ1 [imm32t]            is OP=0x30 ; imm32t {
+        local v:4 = imm32t;
+        MOBJ1(v);
 }
 
-:MOBJ3 imm8t             is OP=0x12 ; imm8t {
-        MOBJ3(imm8t);
+:MOBJ2 [imm8t]             is OP=0x11 ; imm8t {
+        local v:1 = imm8t;
+        MOBJ2(v, *:4 (SP));
 }
-:MOBJ3 imm16t            is OP=0x22 ; imm16t {
-        MOBJ3(imm16t);
+:MOBJ2 [imm16t]            is OP=0x21 ; imm16t {
+        local v:2 = imm16t;
+        MOBJ2(v, *:4 (SP));
 }
-:MOBJ3 imm32t            is OP=0x32 ; imm32t {
-        MOBJ3(imm32t);
+:MOBJ2 [imm32t]            is OP=0x31 ; imm32t {
+        local v:4 = imm32t;
+        MOBJ2(v, *:4 (SP));
+}
+
+:MOBJ3 [imm8t]             is OP=0x12 ; imm8t {
+        local v:1 = imm8t;
+        MOBJ3(v);
+}
+:MOBJ3 [imm16t]            is OP=0x22 ; imm16t {
+        local v:2 = imm16t;
+        MOBJ3(v);
+}
+:MOBJ3 [imm32t]            is OP=0x32 ; imm32t {
+        local v:4 = imm32t;
+        MOBJ3(v);
 }
 
 
@@ -100,152 +110,146 @@ define pcodeop CallTblFn0;
 # PUSH
 #########################################################################################################
 
-:PUSH "EAX"             is OP=0x81 {
-        sp = sp - 4;
-        r0 = eax;
+:"PUSH EAX"             is OP=0x81 {
+        SP = SP - 4;
+        *:4 (SP) = EAX;
 }
-:POP "EAX"             is OP=0x80 {
-        eax = r0;
-        sp = sp + 4;
+:"POP EAX"             is OP=0x80 {
+        EAX = *:4 (SP);
+        SP = SP + 4;
 }
 
-:PUSH imm8t             is OP=0x17 ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t             is OP=0x17 ; imm8t {
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm16t            is OP=0x27 ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t            is OP=0x27 ; imm16t {
+        local val = imm16t & 0xFFFF;
         push16(val);        
 }
-:PUSH imm32t            is OP=0x37 ; imm32t {
+:PUSH32 imm32t            is OP=0x37 ; imm32t {
         local val = imm32t;
         push32(val);         
 }
-:PUSH imm8t             is OP=0x50 ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t             is OP=0x50 ; imm8t {
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm8t             is OP=0x51 ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t             is OP=0x51 ; imm8t {
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm16t            is OP=0x52 ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t            is OP=0x52 ; imm16t {
+        local val = imm16t & 0xFFFF;
         push16(val);
 }
-:PUSH imm32t            is OP=0x53 ; imm32t {
+:PUSH32 imm32t            is OP=0x53 ; imm32t {
         local val = imm32t;
         push32(val); 
 }
-:PUSH imm8t             is OP=0x5E ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t             is OP=0x5E ; imm8t {
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm8t             is OP=0x5D ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t             is OP=0x5D ; imm8t {
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm8t             is OP=0x5C ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t             is OP=0x5C ; imm8t {
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm8t             is OP=0x5F ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t            is OP=0x5F ; imm8t{
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm16t             is OP=0x60 ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t            is OP=0x60 ; imm16t{
+        local val = imm16t & 0xFFFF;
         push16(val); 
 }
-:PUSH imm8t             is OP=0x61 ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t            is OP=0x61 ; imm8t{
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm16t            is OP=0x62 ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t           is OP=0x62 ; imm16t{
+        local val = imm16t & 0xFFFF;
         push16(val); 
 }
-:PUSH imm32t            is OP=0x63 ; imm32t {
+:PUSH32 imm32t            is OP=0x63 ; imm32t {
         local val = imm32t;
         push32(val); 
 }
-:PUSH imm16t            is OP=0x68 ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t           is OP=0x68 ; imm16t{
+        local val = imm16t & 0xFFFF;
         push16(val); 
 }
-:PUSH imm16t             is OP=0x6A ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t            is OP=0x6A ; imm16t{
+        local val = imm16t & 0xFFFF;
         push16(val);
 }
-:PUSH imm16t             is OP=0x6F ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t            is OP=0x6F ; imm16t{
+        local val = imm16t & 0xFFFF;
         push16(val);
 }
-:PUSH imm16t             is OP=0x6B ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t            is OP=0x6B ; imm16t {
+        local val = imm16t & 0xFFFF;
         push16(val);
 }
-:PUSH imm16t             is OP=0x6E ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t            is OP=0x6E ; imm16t{
+        local val = imm16t & 0xFFFF;
         push16(val);
 }
-:PUSH imm32t             is OP=0x70 ; imm32t {
+:PUSH32 imm32t             is OP=0x70 ; imm32t {
         local val = imm32t;
         push32(val); 
 }
-:PUSH imm8t             is OP=0x71 ; imm8t {
-        local val = imm8t;
+:PUSH8 imm8t            is OP=0x71 ; imm8t{
+        local val = imm8t & 0xFF;
         push8(val);
 }
-:PUSH imm16t            is OP=0x72 ; imm16t {
-        local val = imm16t;
+:PUSH16 imm16t           is OP=0x72 ; imm16t{
+        local val = imm16t & 0xFFFF;
         push16(val); 
 }
-:PUSH imm32t            is OP=0x73 ; imm32t {
+:PUSH32 imm32t            is OP=0x73 ; imm32t {
         local val = imm32t;
         push32(val);      
 }
 
-#0x82 	        1000 0010 	[MOBJ] Reads 8-bit value from cycle pointer
-:RD8CYCL        is OP=0x82   {
-        local offs = base + r0;
-        r0 = *:1 offs;
+:"MOV8D R0, [base + R0]"        is OP=0x82   {
+        local offs = base + R0;
+        R0 = *:1 offs;
 }
 
-#0x83 	        1000 0011 	[MOBJ] Reads 16-bit value from cycle pointer
-:RD16CYCL        is OP=0x83    {
-        local offs = base + r0;
-        r0 = *:2 offs;
+:"MOV16D R0, [base + R0]"        is OP=0x83    {
+        local offs = base + R0;
+        R0 = *:2 offs;
 }
 
-#0x84 	        1000 0100 	[MOBJ] Reads 32-bit value from cycle pointer
-:RD32CYCL        is OP=0x84     {
-        local offs = base + r0;
-        r0 = *:4 offs;
+:"MOV8D R0, [base + R0]"        is OP=0x84     {
+        local offs = base + R0;
+        R0 = *:4 offs;
 }
 
-#0x85 	        1000 0101 	[MOBJ] Writes 8-bit to cycle pointer
-:WR8CYCL         is OP=0x85  {
-        local offs = base + r1;
-        *:1 offs = r0;
-        r1 = r0;
-        sp = sp + 4;
+:"MOV8D [base + R1], R0"         is OP=0x85  {
+        local offs = base + R1;
+        *:1 offs = R0;
+        R1 = R0;
+        SP = SP + 4;
 }
 
-#0x86 	        1000 0110 	[MOBJ] Writes 16-bit to cycle pointer
-:WR16CYCL        is OP=0x86  {
-        local offs = base + r1;
-        *:2 offs = r0;
-        r1 = r0;
-        sp = sp + 4;
+:"MOV16D [base + R1], R0"        is OP=0x86  {
+        local offs = base + *:4 (SP+4);
+        *:2 offs = *:4 (SP);
+        *:4 (SP+4) = *:4 (SP);
+        SP = SP + 4;
 }
 
-#0x87 	        1000 0111 	[MOBJ] Writes 32-bit to cycle pointer
-:WR32CYCL        is OP=0x87 {
-        local offs = base + r1;
-        *:4 offs = r0;
-        r1 = r0;
-        sp = sp + 4;
+:"MOV32D [base + R1], R0"        is OP=0x87  {
+        local offs = base + *:4 (SP+4);
+        *:4 offs = *:4 SP;
+        *:4 (SP+4) = *:4 SP;
+        SP = SP + 4;
 }
 
 
@@ -253,16 +257,15 @@ define pcodeop CallTblFn0;
 # ADD SP, #X
 #########################################################################################################
 :ADD "SP, " imm8t             is OP=0x13 ; imm8t {
-        i = 4 * (imm8t / 4);
-        sp = sp + i;
+        local t:4 = sext(imm8t);
+        SP = SP + t;
 }
 :ADD "SP, " imm16t            is OP=0x23 ; imm16t {
-        i = 4 * (imm16t / 4);
-        sp = sp + i;     
+        local t:4 = sext(imm16t);
+        SP = SP + t;
 }
 :ADD "SP, " imm32t            is OP=0x33 ; imm32t {
-        i = 4 * (imm32t / 4);
-        sp = sp + i;       
+        SP = SP + imm32t;       
 }
 
 #########################################################################################################
@@ -271,10 +274,14 @@ define pcodeop CallTblFn0;
 
 # JMP by IMM + other val
 :JMP imm8t             is OP=0x14 ; imm8t {
-        goto [imm8t + inst_start];
+        local t:4 = sext(imm8t);
+        local s:4 = t + inst_start;
+        goto [s];
 }
 :JMP imm16t            is OP=0x24 ; imm16t {
-        goto [imm16t + inst_start];
+        local t:4 = sext(imm16t);
+        local s:4 = t + inst_start;
+        goto [s];
 }
 :JMP imm32t            is OP=0x34 ; imm32t {
         goto [imm32t + inst_start];
@@ -282,10 +289,14 @@ define pcodeop CallTblFn0;
 
 # JMP by IMM
 :JMP imm8t             is OP=0x15 ; imm8t {
-        goto [imm8t + inst_start];
+        local t:4 = sext(imm8t);
+        local s:4 = t + inst_start;
+        goto [s];
 }
 :JMP imm16t            is OP=0x25 ; imm16t {
-        goto [imm16t + inst_start];
+        local t:4 = sext(imm16t);
+        local s:4 = t + inst_start;
+        goto [s - 3];
 }
 :JMP imm32t            is OP=0x35 ; imm32t {
         goto [imm32t + inst_start];
@@ -293,15 +304,19 @@ define pcodeop CallTblFn0;
 
 # IF R14 is zero, then JMP...
 :JZ imm8t             is OP=0x16 ; imm8t {
-        if ( eax != 0 ) goto inst_next;
-        goto [imm8t+inst_start];
+        if ( EAX != 0 ) goto inst_next;
+        local t:4 = sext(imm8t);
+        local s:4 = t + inst_start;
+        goto [s];
 }
 :JZ imm16t            is OP=0x26 ; imm16t {
-        if ( eax != 0 ) goto inst_next;
-        goto [imm16t+inst_start];
+        if ( EAX != 0 ) goto inst_next;
+        local t:4 = sext(imm16t);
+        local s:4 = t + inst_start;
+        goto [s];
 }
 :JZ imm32t            is OP=0x36 ; imm32t {
-        if ( eax != 0 ) goto inst_next;
+        if ( EAX != 0 ) goto inst_next;
         goto [imm32t+inst_start];
 }
 
@@ -310,220 +325,231 @@ define pcodeop CallTblFn0;
 #########################################################################################################
 
 :CALL imm8t             is OP=0x19 ; imm8t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         callSet3(imm8t, val1, val2, val3, val4);
 }
 
 :CALL imm16t            is OP=0x29 ; imm16t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         callSet3(imm16t, val1, val2, val3, val4);
 }
 :CALL imm32t            is OP=0x39 ; imm32t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         callSet3(imm32t, val1, val2, val3, val4);
 }
 
 :CALL imm8t             is OP=0x1A ; imm8t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         callSet2(imm8t, val1, val2, val3, val4);
 }
 :CALL imm16t            is OP=0x2A ; imm16t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         callSet2(imm16t, val1, val2, val3, val4);
 }
 :CALL imm32t            is OP=0x3A ; imm32t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         callSet2(imm32t, val1, val2, val3, val4);
 }
 
 # Shenmue Fn Table
 :CALL_SSF imm8t             is OP=0x1B ; imm8t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
-        eax = ShenmueFunc(imm8t, val1, val2, val3, val4);
+        EAX = ShenmueFunc(imm8t, val1, val2, val3, val4);
 }
 :CALL_SSF imm16t            is OP=0x2B ; imm16t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
-        eax = ShenmueFunc(imm16t, val1, val2, val3, val4);
+        EAX = ShenmueFunc(imm16t, val1, val2, val3, val4);
 }
 :CALL_SSF imm32t            is OP=0x3B ; imm32t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
-        eax = ShenmueFunc(imm32t, val1, val2, val3, val4);
+        EAX = ShenmueFunc(imm32t, val1, val2, val3, val4);
 }
 
 :CALL imm8t             is OP=0x1C ; imm8t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         CallTblFn0(imm8t, val1, val2, val3, val4);
 }
 :CALL imm16t            is OP=0x2C ; imm16t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         CallTblFn0(imm16t, val1, val2, val3, val4);
 }
 :CALL imm32t            is OP=0x3C ; imm32t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         CallTblFn0(imm32t, val1, val2, val3, val4);
 }
 
 :CALL imm8t             is OP=0x1D ; imm8t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         CallTblFn0(imm8t, val1, val2, val3, val4);
 }
 :CALL imm16t            is OP=0x2D ; imm16t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         CallTblFn0(imm16t, val1, val2, val3, val4);
 }
 :CALL imm32t            is OP=0x3D ; imm32t {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        local val3:4 = *:4 (sp + 8);
-        local val4:4 = *:4 (sp + 12);
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        local val3:4 = *:4 (SP + 8);
+        local val4:4 = *:4 (SP + 12);
 
         CallTblFn0(imm32t, val1, val2, val3, val4);
 }
 
 # Invalid Opcodes
-:RET            is OP=0x00 {
-        tmp:4 = 0;
-        return [tmp];
-}
+:NOP            is OP=0x00 {}
 :NOP            is OP=0xFF ; imm16t {}
 
 #########################################################################################################
 # Operators
 #########################################################################################################
 
-:NEG "r0"           is OP=0x8E {
-        local val1:4 = *:4 sp;
-        *:4 sp = ~val1;
+:NEG "R0"           is OP=0x8E {
+        local val1:4 = *:4 SP;
+        *:4 SP = ~val1;
 }
-:AND "r1, r0"       is OP=0x8F  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  & val1;        
+:AND "R1, R0"       is OP=0x8F  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  & val1;        
+        SP = SP + 4;
 }
-:OR  "r1, r0"       is OP=0x90  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  | val1;  
+:OR  "R1, R0"       is OP=0x90  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  | val1;  
+        SP = SP + 4;
 }
-:XOR "r1, r0"        is OP=0x91  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  ^ val1;  
+:XOR "R1, R0"        is OP=0x91  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  ^ val1;  
+        SP = SP + 4;
 }
-:ADD "r1, r0"         is OP=0x92  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  + val1;  
+:ADD "R1, R0"         is OP=0x92  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  + val1;  
+        SP = SP + 4;
 }
-:SUB "r1, r0"        is OP=0x93  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  - val1;  
+:SUB "R1, R0"        is OP=0x93  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  - val1;  
+        SP = SP + 4;
 }
-:MUL "r1, r0"        is OP=0x94  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  * val1;  
+:MUL "R1, R0"        is OP=0x94  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  * val1;  
+        SP = SP + 4;
 }
-:DIV "r1, r0"        is OP=0x95  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  / val1;  
+:DIV "R1, R0"        is OP=0x95  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  / val1;  
+        SP = SP + 4;
 }
-:MOD "r1, r0"        is OP=0x96  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  % val1;  
+:MOD "R1, R0"        is OP=0x96  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  % val1;  
+        SP = SP + 4;
 }
-:LSHIFT "r1, r0"       is OP=0x97  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  << val1;  
+:LSHIFT "R1, R0"       is OP=0x97  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  << val1;  
+        SP = SP + 4;
 }
-:RSHIFT "r1, r0"       is OP=0x98  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val2  >> val1;  
+:RSHIFT "R1, R0"       is OP=0x98  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val2  >> val1;  
+        SP = SP + 4;
 }
-:CAST_FLOAT "r0"       is OP=0x9D  {
-        local val1:4 = *:4 sp;
-        *:4 (sp + 4) = int2float(val1);  
+:INT2FLOAT "R1, R0"       is OP=0x9D  {
+        local val1:4 = *:4 SP;
+        *:4 (SP + 4) = int2float(val1);  
 }
-:FADD   "r1, r0"     is OP=0xA3  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val1  f+ val2;          
+:FADD   "R1, R0"     is OP=0xA3  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val1  f+ val2;    
+        SP = SP + 4;
 }
-:FSUB   "r1, r0"     is OP=0xA4  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val1  f- val2;                  
+:FSUB   "R1, R0"     is OP=0xA4  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val1  f- val2;                  
+        SP = SP + 4;
 }
-:FMUL   "r1, r0"     is OP=0xA5  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val1  f* val2;          
+:FMUL   "R1, R0"     is OP=0xA5  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val1  f* val2;          
+        SP = SP + 4;
 }
-:FDIV   "r1, r0"     is OP=0xA6  {
-        local val1:4 = *:4 sp;
-        local val2:4 = *:4 (sp + 4);
-        *:4 (sp + 4) = val1  f/ val2;          
+:FDIV   "R1, R0"     is OP=0xA6  {
+        local val1:4 = *:4 SP;
+        local val2:4 = *:4 (SP + 4);
+        *:4 (SP + 4) = val1  f/ val2;          
+        SP = SP + 4;
 }
 
 #########################################################################################################
@@ -531,151 +557,161 @@ define pcodeop CallTblFn0;
 #########################################################################################################
 
 #0x88 	        1000 1000 	==
-:IS_EQU          is OP=0x88  {
-        local tr0:4 = *:4 (sp);
-        local tr1:4 = *:4 (sp + 4);
-        
+:EQU "R0, R1"          is OP=0x88  {
+        local tr0:4 = *:4 (SP);
+        local tr1:4 = *:4 (SP + 4);
+        SP = SP + 4;
+
         if ( tr0 == tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0x89 	        1000 1001 	!=
-:IS_NEQ          is OP=0x89  {
-        local tr0:4 = *:4 (sp);
-        local tr1:4 = *:4 (sp + 4);
-        
+:NEQ "R0, R1"          is OP=0x89  {
+        local tr0:4 = *:4 (SP);
+        local tr1:4 = *:4 (SP + 4);
+        SP = SP + 4;
+
         if ( tr0 != tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0x8A 	        1000 1010 	>=
-:gt"/eq"         is OP=0x8A  {
-        local tr0:4 = *:4 (sp);
-        local tr1:4 = *:4 (sp + 4);
-        
+:"GT/EQ" "R0, R1"         is OP=0x8A  {
+        local tr0:4 = *:4 (SP);
+        local tr1:4 = *:4 (SP + 4);
+        SP = SP + 4;
+
         if ( tr0 >= tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0x8B 	        1000 1011 	>
-:gt           is OP=0x8B  {
-        local tr0:4 = *:4 (sp);
-        local tr1:4 = *:4 (sp + 4);
-        
+:GT "R0, R1"           is OP=0x8B  {
+        local tr0:4 = *:4 (SP);
+        local tr1:4 = *:4 (SP + 4);
+        SP = SP + 4;
+
         if ( tr0 > tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0x8C 	        1000 1100 	<=
-:lt"/eq"         is OP=0x8C  {
-        local tr0:4 = *:4 (sp);
-        local tr1:4 = *:4 (sp + 4);
-        
+:"LT/EQ" "R0, R1"         is OP=0x8C  {
+        local tr0:4 = *:4 (SP);
+        local tr1:4 = *:4 (SP + 4);
+        SP = SP + 4;
+
         if ( tr0 <= tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0x8D 	        1000 1101 	<
-:lt           is OP=0x8D  {
-        local tr0:4 = *:4 (sp);
-        local tr1:4 = *:4 (sp + 4);
-        
+:LT "R0, R1"           is OP=0x8D  {
+        local tr0:4 = *:4 (SP);
+        local tr1:4 = *:4 (SP + 4);
+        SP = SP + 4;
+
         if ( tr0 < tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0x9E 	        1001 1110 	signed cast
-:CAST_SIGN        is OP=0x9E  {
+:FLOAT2INT "R0, R0"        is OP=0x9E  {
         # @ TODO
         #  curr_stack->R0 = (int)*(float *)&curr_stack->R0;
-        local floored:4 = floor(float2float(*:4 (sp)));
-        *:4 (sp) = trunc(floored);        
+        local floored:4 = floor(float2float(*:4 (SP)));
+        *:4 (SP) = trunc(floored);        
 }
 
 #0x9F 	        1001 1111 	(float) <=
-:flt"/eq"        is OP=0x9F     {
-        local tr0:4 = float2float(*:4 (sp));
-        local tr1:4 = float2float(*:4 (sp + 4));
-        
+:"FLT/EQ" "R0, R1"        is OP=0x9F     {
+        local tr0:4 = float2float(*:4 (SP));
+        local tr1:4 = float2float(*:4 (SP + 4));
+        SP = SP + 4;
+
         if ( tr0 f<= tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0xA0 	        1010 0000 	(float) <
-:f"/lt"        is OP=0xA0       {
-        local tr0:4 = float2float(*:4 (sp));
-        local tr1:4 = float2float(*:4 (sp + 4));
-        
+:"F/LT" "R0, R1"        is OP=0xA0       {
+        local tr0:4 = float2float(*:4 (SP));
+        local tr1:4 = float2float(*:4 (SP + 4));
+        SP = SP + 4;
+
         if ( tr0 f< tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0xA1 	        1010 0001 	(float) >= (<= inverted)
-:fgt"/eq"        is OP=0xA1     {
-        local tr0:4 = float2float(*:4 (sp));
-        local tr1:4 = float2float(*:4 (sp + 4));
-        
+:"FGT/EQ" "R0, R1"        is OP=0xA1     {
+        local tr0:4 = float2float(*:4 (SP));
+        local tr1:4 = float2float(*:4 (SP + 4));
+        SP = SP + 4;
+
         if ( tr0 f>= tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0xA2 	        1010 0010 	(float) > (< inverted)
-:f"/gt"        is OP=0xA2       {
-        local tr0:4 = float2float(*:4 (sp));
-        local tr1:4 = float2float(*:4 (sp + 4));
-        
+:"F/GT" "R0, R1"        is OP=0xA2       {
+        local tr0:4 = float2float(*:4 (SP));
+        local tr1:4 = float2float(*:4 (SP + 4));
+        SP = SP + 4;
+
         if ( tr0 f> tr1 ) goto <true>;
         goto <false>;
         <true>
-        eax = 1;
+        R0 = 1;
         goto inst_next;
         <false>
-        eax = 0;
+        R0 = 0;
 }
 
 #0x40 - 0x4F 	0100 xxxx 	Writes value from last time to stack
