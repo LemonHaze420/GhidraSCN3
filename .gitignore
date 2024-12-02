@@ -31,3 +31,9 @@ _ReSharper*/
 #Nuget packages folder
 packages/
 *.sla
+
+.gradle/
+.settings/
+build/
+bin/
+/.antProperties.xml
